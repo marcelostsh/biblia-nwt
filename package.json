@@ -18,6 +18,8 @@
     "vue-router": "^5.0.4"
   },
   "devDependencies": {
-    "sass-embedded": "^1.99.0"
+    "gh-pages": "^6.3.0",
+    "sass-embedded": "^1.99.0",
+    "vite-plugin-pwa": "^1.2.0"
   }
 }

@@ -21,3 +21,9 @@ app.use(Quasar, {
 })
 
 app.mount('#app')
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/biblia-nwt/sw.js')
+  })
+}

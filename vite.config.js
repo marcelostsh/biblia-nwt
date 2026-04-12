@@ -3,6 +3,7 @@ import vue from '@vitejs/plugin-vue'
 import { quasar, transformAssetUrls } from '@quasar/vite-plugin'
 
 export default defineConfig({
+  base: '/biblia-nwt/',
   plugins: [
     vue({ template: { transformAssetUrls } }),
     quasar({

@@ -16,7 +16,8 @@ defineProps({
           :id="`verse-${verse.number}`"
           class="verse"
         >
-          <span class="verse-number">{{ verse.number }}</span>
+          <span v-if="verse.number === 1" class="chapter-number">{{ chapterNumber }}</span>
+          <span v-else class="verse-number">{{ verse.number }}</span>
           <span class="verse-text">{{ verse.text }}</span>
         </p>
       </q-card-section>
@@ -40,6 +41,16 @@ defineProps({
   border-radius: 4px;
 }
 
+.chapter-number {
+  float: left;
+  font-size: 2.8rem;
+  font-weight: 700;
+  line-height: 0.85;
+  color: var(--q-primary);
+  margin-right: 6px;
+  padding-top: 4px;
+}
+
 .verse.highlight {
   background: #fff3cd;
 }
@@ -49,6 +60,7 @@ defineProps({
   font-weight: 700;
   color: var(--q-primary);
   vertical-align: super;
-  margin-right: 3px;
+  margin-right: 6px;
+  padding: 2px 6px;
 }
 </style>

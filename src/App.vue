@@ -24,6 +24,7 @@ const touchDeltaX = ref(0)
 const isSwiping = ref(false)
 const swipeDirection = ref(null)
 const isAnimating = ref(false)
+const skipTransition = ref(false)
 
 const books = computed(() => bible.books)
 
@@ -217,18 +218,22 @@ function onCarouselTouchEnd() {
     isAnimating.value = true
     touchDeltaX.value = window.innerWidth
     setTimeout(() => {
+      skipTransition.value = true
       goToChapter(currentChapterIndex.value - 1)
       touchDeltaX.value = 0
       isAnimating.value = false
+      nextTick(() => { skipTransition.value = false })
     }, 300)
   } else if (touchDeltaX.value < -threshold && hasNextChapter.value) {
     // Animate to next
     isAnimating.value = true
     touchDeltaX.value = -window.innerWidth
     setTimeout(() => {
+      skipTransition.value = true
       goToChapter(currentChapterIndex.value + 1)
       touchDeltaX.value = 0
       isAnimating.value = false
+      nextTick(() => { skipTransition.value = false })
     }, 300)
   } else {
     // Snap back
@@ -327,7 +332,7 @@ const headerTitle = computed(() => {
             class="carousel-track"
             :style="{
               transform: `translateX(calc(-100% + ${touchDeltaX}px))`,
-              transition: isSwiping ? 'none' : 'transform 0.3s ease'
+              transition: (isSwiping || skipTransition) ? 'none' : 'transform 0.3s ease'
             }"
           >
             <!-- Prev chapter panel -->

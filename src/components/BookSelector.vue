@@ -25,13 +25,14 @@ function testamentLabel(testament) {
       <div class="row q-col-gutter-xs q-px-xs">
         <div
           class="col-6"
-          v-for="book in books.filter(b => b.testament === testament)"
+          v-for="(book, index) in books.filter(b => b.testament === testament)"
           :key="book.id"
         >
           <q-card
             flat
             bordered
-            class="cursor-pointer book-card"
+            class="cursor-pointer book-card book-enter"
+            :style="{ animationDelay: `${index * 20}ms` }"
             @click="emit('select', book)"
             v-ripple
           >
@@ -53,5 +54,20 @@ function testamentLabel(testament) {
 }
 .book-card:active {
   background: #e8eef6;
+}
+
+@keyframes bookIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.book-enter {
+  animation: bookIn 0.25s ease both;
 }
 </style>

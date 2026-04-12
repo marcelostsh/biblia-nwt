@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import bible from './data/bible.json'
 import BookSelector from './components/BookSelector.vue'
 import ChapterSelector from './components/ChapterSelector.vue'
@@ -11,11 +11,15 @@ const selectedBook = ref(null)
 const selectedChapter = ref(null)
 const searchQuery = ref('')
 const inputOpen = ref(true)
+const currentPanel = ref(null)
 
 // Touch handling for selection slides (step 0-1)
 const selectionTouchStartX = ref(0)
+const selectionTouchStartY = ref(0)
 const selectionDeltaX = ref(0)
 const selectionSwiping = ref(false)
+const selectionSwipeDir = ref(null)
+const selectionAnimating = ref(false)
 
 // Touch handling for chapter carousel (step 2)
 const touchStartX = ref(0)
@@ -108,8 +112,16 @@ function selectBook(book, fromSearch = false) {
   selectedBook.value = book
   selectedChapter.value = null
   searchQuery.value = ''
-  step.value = 1
-  if (!fromSearch) inputOpen.value = false
+  if (book.chapters.length === 1) {
+    selectedChapter.value = book.chapters[0]
+    step.value = 2
+    inputOpen.value = false
+    history.pushState({ step: 2 }, '')
+  } else {
+    step.value = 1
+    if (!fromSearch) inputOpen.value = false
+    history.pushState({ step: 1 }, '')
+  }
 }
 
 function selectChapter(chapter, fromSearch = false) {
@@ -117,6 +129,7 @@ function selectChapter(chapter, fromSearch = false) {
   searchQuery.value = ''
   step.value = 2
   if (!fromSearch) inputOpen.value = false
+  history.pushState({ step: 2 }, '')
 }
 
 function scrollToVerse(verseNum) {
@@ -124,7 +137,8 @@ function scrollToVerse(verseNum) {
   searchQuery.value = ''
   document.activeElement?.blur()
   nextTick(() => {
-    const el = document.getElementById(`verse-${verseNum}`)
+    const container = currentPanel.value || document
+    const el = container.querySelector(`#verse-${verseNum}`)
     if (el) {
       el.scrollIntoView({ behavior: 'smooth', block: 'center' })
       el.classList.add('highlight')
@@ -141,6 +155,17 @@ function goHome() {
   inputOpen.value = true
 }
 
+function goToChapters() {
+  selectedChapter.value = null
+  searchQuery.value = ''
+  step.value = 1
+  inputOpen.value = true
+}
+
+function openVerseInput() {
+  inputOpen.value = true
+}
+
 function goToChapter(index) {
   if (index >= 0 && index < chapters.value.length) {
     selectedChapter.value = chapters.value[index]
@@ -152,6 +177,70 @@ function goToChapter(index) {
       })
     })
   }
+}
+
+// Selection slides touch handling
+function onSelectionTouchStart(e) {
+  if (selectionAnimating.value) return
+  selectionTouchStartX.value = e.touches[0].clientX
+  selectionTouchStartY.value = e.touches[0].clientY
+  selectionDeltaX.value = 0
+  selectionSwiping.value = false
+  selectionSwipeDir.value = null
+}
+
+function onSelectionTouchMove(e) {
+  if (selectionAnimating.value) return
+  const deltaX = e.touches[0].clientX - selectionTouchStartX.value
+  const deltaY = e.touches[0].clientY - selectionTouchStartY.value
+
+  if (!selectionSwipeDir.value) {
+    if (Math.abs(deltaX) > 10 || Math.abs(deltaY) > 10) {
+      selectionSwipeDir.value = Math.abs(deltaX) > Math.abs(deltaY) ? 'horizontal' : 'vertical'
+    }
+  }
+
+  if (selectionSwipeDir.value !== 'horizontal') return
+  e.preventDefault()
+
+  // Only allow swipe right (back) when on chapters (step 1)
+  if (step.value === 0 || deltaX < 0) {
+    selectionDeltaX.value = deltaX * 0.2 // rubber band
+    selectionSwiping.value = true
+    return
+  }
+
+  selectionSwiping.value = true
+  selectionDeltaX.value = deltaX
+}
+
+function onSelectionTouchEnd() {
+  if (!selectionSwiping.value) {
+    selectionSwipeDir.value = null
+    return
+  }
+
+  const threshold = window.innerWidth * 0.25
+
+  if (selectionDeltaX.value > threshold && step.value === 1) {
+    // Swipe back to books
+    selectionAnimating.value = true
+    selectionDeltaX.value = window.innerWidth
+    setTimeout(() => {
+      selectedBook.value = null
+      selectedChapter.value = null
+      searchQuery.value = ''
+      step.value = 0
+      selectionDeltaX.value = 0
+      selectionAnimating.value = false
+    }, 300)
+  } else {
+    // Snap back
+    selectionDeltaX.value = 0
+  }
+
+  selectionSwiping.value = false
+  selectionSwipeDir.value = null
 }
 
 function handleEnter() {
@@ -259,6 +348,27 @@ const headerTitle = computed(() => {
   if (step.value === 1) return selectedBook.value?.name || ''
   return `${selectedBook.value?.name} ${selectedChapter.value?.number}`
 })
+
+function onPopState() {
+  if (step.value === 2) {
+    if (chapters.value.length <= 1) {
+      goHome()
+    } else {
+      goToChapters()
+    }
+  } else if (step.value === 1) {
+    goHome()
+  }
+}
+
+onMounted(() => {
+  history.replaceState({ step: 0 }, '')
+  window.addEventListener('popstate', onPopState)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('popstate', onPopState)
+})
 </script>
 
 <template>
@@ -271,7 +381,7 @@ const headerTitle = computed(() => {
           dense
           round
           icon="arrow_back"
-          @click="goHome"
+          @click="step === 1 || chapters.length <= 1 ? goHome() : goToChapters()"
         />
         <q-toolbar-title>{{ headerTitle }}</q-toolbar-title>
         <template v-if="step === 2">
@@ -294,12 +404,18 @@ const headerTitle = computed(() => {
     <q-page-container>
       <div class="app-content">
         <!-- Selection mode: books & chapters -->
-        <div v-if="step < 2" class="slides-wrapper">
+        <div
+          v-if="step < 2"
+          class="slides-wrapper"
+          @touchstart="onSelectionTouchStart"
+          @touchmove="onSelectionTouchMove"
+          @touchend="onSelectionTouchEnd"
+        >
           <div
             class="slides-track"
             :style="{
-              transform: `translateX(${-step * 100}%)`,
-              transition: 'transform 0.3s ease'
+              transform: `translateX(calc(${-step * 100}% + ${selectionDeltaX}px))`,
+              transition: selectionSwiping ? 'none' : 'transform 0.3s ease'
             }"
           >
             <div class="slide">
@@ -346,7 +462,7 @@ const headerTitle = computed(() => {
             </div>
 
             <!-- Current chapter panel -->
-            <div class="carousel-panel">
+            <div class="carousel-panel" ref="currentPanel">
               <VerseViewer
                 v-if="selectedChapter"
                 :verses="verses"
@@ -373,8 +489,16 @@ const headerTitle = computed(() => {
           :input-mode="currentInputMode"
           :placeholder="currentPlaceholder"
           :is-open="inputOpen"
+          :step="step"
+          :book-name="selectedBook?.abbrev || selectedBook?.name || ''"
+          :chapter-number="selectedChapter?.number || 0"
+          :total-verses="verses.length"
+          :multi-chapter="chapters.length > 1"
           @enter="handleEnter"
           @open="inputOpen = true"
+          @goto-books="goHome"
+          @goto-chapters="goToChapters"
+          @goto-verse="openVerseInput"
         />
       </div>
     </q-page-container>

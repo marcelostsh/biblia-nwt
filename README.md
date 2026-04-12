@@ -6,7 +6,8 @@ Leitor da Bíblia (Tradução do Novo Mundo) em formato web, mobile only, inspir
 
 ## Stack
 
-- **Vue 3** + **Vite 8**
+- **Vue 3** + **Quasar Framework** + **Vite 8**
+- Componentes Quasar (Material Design): `q-card`, `q-btn`, `q-input`, `q-toolbar`, `q-layout`, etc.
 - Dados extraídos do EPUB `nwt_T.epub` → `src/data/bible.json`
 - Script de parsing: `parse-epub.js`
 
@@ -14,7 +15,9 @@ Leitor da Bíblia (Tradução do Novo Mundo) em formato web, mobile only, inspir
 
 - [x] EPUB parseado (66 livros, 1189 capítulos, 31078 versículos)
 - [x] Wizard horizontal com slide (Livro → Capítulo → Versículos)
-- [x] Swipe back (arrastar pra direita volta)
+- [x] Swipe entre capítulos (esquerda = próximo, direita = anterior)
+- [x] Botão voltar no header → volta direto pra seleção de livros
+- [x] Setas de navegação de capítulos no header
 - [x] Input de busca fixo no rodapé
 - [x] Filtro em tempo real com auto-avanço
 - [x] Enter/OK pega primeiro da lista
@@ -24,36 +27,34 @@ Leitor da Bíblia (Tradução do Novo Mundo) em formato web, mobile only, inspir
 - [x] Input continua aberto se navegou via busca, fecha se tocou na tela
 - [x] Teclado fecha ao chegar no versículo
 
-## Conceito
+## Navegação
 
-Aplicação **mobile only**, pensada para uso com uma mão. Navegação simples e rápida até qualquer versículo da Bíblia.
-
-## Navegação - Wizard com Slide Horizontal
-
-Fluxo linear em 3 etapas com transição de slide horizontal:
+### Fluxo
 
 ```
-[Livro] → [Capítulo] → [Versículo/Conteúdo]
+[Livro] → [Capítulo] → [Versículos]
 ```
 
 ### Tela 1 - Seleção de Livro
-- Lista dos 66 livros em grid 2 colunas
+- Cards Quasar em grid 2 colunas com ripple
 - Separados por Escrituras Hebraicas / Gregas
 
 ### Tela 2 - Seleção de Capítulo
-- Grid 5 colunas com números dos capítulos
+- Botões Quasar outline em grid 5 colunas
 
 ### Tela 3 - Versículos (Conteúdo)
-- Texto do capítulo com versículos numerados
+- Texto do capítulo em q-card com versículos numerados
 - Highlight temporário ao navegar via busca
+- **Swipe horizontal** navega entre capítulos
+- Setas no header para navegação sem swipe
 
-### Gestos (Swipe)
-- **Swipe para direita (voltar):** sempre permitido
-- **Avançar:** somente selecionando uma opção
+### Gestos
+- **Na leitura:** swipe esquerda/direita = próximo/anterior capítulo
+- **Botão voltar** (header) = volta pra seleção de livros
 
 ## Input de Busca no Rodapé
 
-Input fixo no rodapé, sempre visível, posicionado para o polegar.
+Input Quasar (`q-input`) fixo no rodapé, sempre visível, posicionado para o polegar.
 
 ### Comportamento
 
@@ -80,31 +81,20 @@ Input fixo no rodapé, sempre visível, posicionado para o polegar.
 "gen" → auto-avança → "3" → auto-avança → "16" → exibe versículo → teclado fecha
 ```
 
-## Visual
-
-Inspirado no jw.org:
-- Design limpo, fundo #f5f5f5
-- Header azul #4a6da7
-- Cards brancos com bordas suaves
-- Tipografia sóbria, versículos com número em azul superscript
-
 ## Estrutura
 
 ```
 src/
-  App.vue              — lógica principal, wizard, swipe, busca
-  main.js              — entry point
-  assets/main.css      — reset e estilos globais
+  App.vue              — layout Quasar, wizard, swipe entre capítulos, busca
+  main.js              — entry point + setup Quasar
   components/
-    BookSelector.vue   — grid de livros
-    ChapterSelector.vue — grid de capítulos
-    VerseViewer.vue    — exibição dos versículos
-    SearchInput.vue    — input fixo no rodapé
+    BookSelector.vue   — grid de livros (q-card + v-ripple)
+    ChapterSelector.vue — grid de capítulos (q-btn outline)
+    VerseViewer.vue    — exibição dos versículos (q-card)
+    SearchInput.vue    — input fixo no rodapé (q-input)
   data/
     bible.json         — dados parseados (66 livros, ~7MB)
 parse-epub.js          — script Node que parseia o EPUB
-epub_temp/             — EPUB extraído (não vai pro git)
-nwt_T.epub             — EPUB original (não vai pro git)
 ```
 
 ## Setup

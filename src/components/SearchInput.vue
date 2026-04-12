@@ -12,31 +12,21 @@ const emit = defineEmits(['update:modelValue', 'enter', 'open', 'close'])
 
 const inputEl = ref(null)
 
-function onInput(e) {
-  emit('update:modelValue', e.target.value)
-}
-
-function onKeydown(e) {
-  if (e.key === 'Enter') {
-    e.preventDefault()
-    emit('enter')
-  }
-}
-
 function focusInput() {
   if (!props.isOpen) {
     emit('open')
   }
   nextTick(() => {
-    inputEl.value?.focus()
+    const el = inputEl.value?.$el?.querySelector('input') || inputEl.value
+    el?.focus()
   })
 }
 
-// Auto-focus when opened
 watch(() => props.isOpen, (val) => {
   if (val) {
     nextTick(() => {
-      inputEl.value?.focus()
+      const el = inputEl.value?.$el?.querySelector('input') || inputEl.value
+      el?.focus()
     })
   }
 })
@@ -44,26 +34,27 @@ watch(() => props.isOpen, (val) => {
 
 <template>
   <div class="search-bar" @click="focusInput">
-    <div class="search-input-wrapper">
-      <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="11" cy="11" r="8"/>
-        <path d="m21 21-4.35-4.35"/>
-      </svg>
-      <input
-        ref="inputEl"
-        type="text"
-        :inputmode="inputMode"
-        :placeholder="placeholder"
-        :value="modelValue"
-        @input="onInput"
-        @keydown="onKeydown"
-        class="search-input"
-        autocomplete="off"
-        autocorrect="off"
-        autocapitalize="off"
-        spellcheck="false"
-      />
-    </div>
+    <q-input
+      ref="inputEl"
+      :model-value="modelValue"
+      @update:model-value="emit('update:modelValue', $event)"
+      @keydown.enter.prevent="emit('enter')"
+      :placeholder="placeholder"
+      :inputmode="inputMode"
+      :type="inputMode === 'numeric' ? 'tel' : 'text'"
+      dense
+      rounded
+      outlined
+      bg-color="grey-2"
+      autocomplete="off"
+      autocorrect="off"
+      autocapitalize="off"
+      spellcheck="false"
+    >
+      <template v-slot:prepend>
+        <q-icon name="search" color="grey-6" />
+      </template>
+    </q-input>
   </div>
 </template>
 
@@ -77,36 +68,7 @@ watch(() => props.isOpen, (val) => {
   padding-bottom: max(8px, env(safe-area-inset-bottom));
   background: white;
   border-top: 1px solid #e0e0e0;
-  box-shadow: 0 -2px 8px rgba(0,0,0,0.08);
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.08);
   z-index: 20;
-  min-height: 52px;
-}
-
-.search-input-wrapper {
-  display: flex;
-  align-items: center;
-  background: #f0f2f5;
-  border-radius: 24px;
-  padding: 0 12px;
-  gap: 8px;
-}
-
-.search-icon {
-  color: #888;
-  flex-shrink: 0;
-}
-
-.search-input {
-  flex: 1;
-  border: none;
-  background: none;
-  padding: 12px 0;
-  font-size: 1rem;
-  color: #333;
-  outline: none;
-}
-
-.search-input::placeholder {
-  color: #aaa;
 }
 </style>

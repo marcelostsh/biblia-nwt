@@ -7,32 +7,27 @@ defineProps({
 </script>
 
 <template>
-  <div class="verse-viewer">
-    <div class="verses-content">
-      <p
-        v-for="verse in verses"
-        :key="verse.number"
-        :id="`verse-${verse.number}`"
-        class="verse"
-      >
-        <span class="verse-number">{{ verse.number }}</span>
-        <span class="verse-text">{{ verse.text }}</span>
-      </p>
-    </div>
+  <div class="q-pa-md" style="padding-bottom: 80px">
+    <q-card flat class="verse-card">
+      <q-card-section>
+        <p
+          v-for="verse in verses"
+          :key="verse.number"
+          :id="`verse-${verse.number}`"
+          class="verse"
+        >
+          <span class="verse-number">{{ verse.number }}</span>
+          <span class="verse-text">{{ verse.text }}</span>
+        </p>
+      </q-card-section>
+    </q-card>
   </div>
 </template>
 
 <style scoped>
-.verse-viewer {
-  padding: 16px;
-  padding-bottom: 80px;
-}
-
-.verses-content {
-  background: white;
+.verse-card {
   border-radius: 12px;
-  padding: 20px 16px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 .verse {
@@ -52,12 +47,8 @@ defineProps({
 .verse-number {
   font-size: 0.75rem;
   font-weight: 700;
-  color: #4a6da7;
+  color: var(--q-primary);
   vertical-align: super;
   margin-right: 3px;
-}
-
-.verse-text {
-  /* inherits from .verse */
 }
 </style>

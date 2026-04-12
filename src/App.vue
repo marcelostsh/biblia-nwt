@@ -10,15 +10,14 @@ const step = ref(0) // 0=book, 1=chapter, 2=verses
 const selectedBook = ref(null)
 const selectedChapter = ref(null)
 const searchQuery = ref('')
-const searchInputRef = ref(null)
 const inputOpen = ref(true)
-const direction = ref('forward') // 'forward' or 'back'
 
-// Touch handling for swipe back
+// Touch handling
 const touchStartX = ref(0)
+const touchStartY = ref(0)
 const touchDeltaX = ref(0)
 const isSwiping = ref(false)
-const panelEl = ref(null)
+const swipeDirection = ref(null)
 
 const books = computed(() => bible.books)
 
@@ -32,12 +31,18 @@ const verses = computed(() => {
   return selectedChapter.value.verses
 })
 
-// Normalize: remove accents and lowercase
+const currentChapterIndex = computed(() => {
+  if (!selectedBook.value || !selectedChapter.value) return -1
+  return chapters.value.findIndex(c => c.number === selectedChapter.value.number)
+})
+
+const hasPrevChapter = computed(() => currentChapterIndex.value > 0)
+const hasNextChapter = computed(() => currentChapterIndex.value < chapters.value.length - 1)
+
 function normalize(str) {
   return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
 }
 
-// Filtered items for search
 const filteredBooks = computed(() => {
   const q = normalize(searchQuery.value.trim())
   if (!q) return books.value
@@ -63,7 +68,6 @@ const filteredVerses = computed(() => {
   )
 })
 
-// Watch filtered results for auto-advance
 watch(filteredBooks, (val) => {
   if (step.value === 0 && val.length === 1 && searchQuery.value.trim()) {
     selectBook(val[0], true)
@@ -86,27 +90,20 @@ function selectBook(book, fromSearch = false) {
   selectedBook.value = book
   selectedChapter.value = null
   searchQuery.value = ''
-  direction.value = 'forward'
   step.value = 1
-  if (!fromSearch) {
-    inputOpen.value = false
-  }
+  if (!fromSearch) inputOpen.value = false
 }
 
 function selectChapter(chapter, fromSearch = false) {
   selectedChapter.value = chapter
   searchQuery.value = ''
-  direction.value = 'forward'
   step.value = 2
-  if (!fromSearch) {
-    inputOpen.value = false
-  }
+  if (!fromSearch) inputOpen.value = false
 }
 
 function scrollToVerse(verseNum) {
   inputOpen.value = false
   searchQuery.value = ''
-  // Fecha o teclado
   document.activeElement?.blur()
   nextTick(() => {
     const el = document.getElementById(`verse-${verseNum}`)
@@ -118,14 +115,22 @@ function scrollToVerse(verseNum) {
   })
 }
 
-function goBack() {
-  if (step.value > 0) {
-    direction.value = 'back'
+function goHome() {
+  selectedBook.value = null
+  selectedChapter.value = null
+  searchQuery.value = ''
+  step.value = 0
+  inputOpen.value = true
+}
+
+function goToChapter(index) {
+  if (index >= 0 && index < chapters.value.length) {
+    selectedChapter.value = chapters.value[index]
     searchQuery.value = ''
-    step.value--
-    if (step.value < 2) {
-      inputOpen.value = true
-    }
+    nextTick(() => {
+      const slide = document.querySelector('.slide-verses')
+      if (slide) slide.scrollTop = 0
+    })
   }
 }
 
@@ -139,29 +144,48 @@ function handleEnter() {
   }
 }
 
-
-// Swipe handling
 function onTouchStart(e) {
   touchStartX.value = e.touches[0].clientX
+  touchStartY.value = e.touches[0].clientY
   touchDeltaX.value = 0
   isSwiping.value = false
+  swipeDirection.value = null
 }
 
 function onTouchMove(e) {
-  const delta = e.touches[0].clientX - touchStartX.value
-  // Only allow swipe right (back) when not on step 0
-  if (delta > 10 && step.value > 0) {
-    isSwiping.value = true
-    touchDeltaX.value = Math.min(delta, window.innerWidth)
+  const deltaX = e.touches[0].clientX - touchStartX.value
+  const deltaY = e.touches[0].clientY - touchStartY.value
+
+  if (!swipeDirection.value) {
+    if (Math.abs(deltaX) > 10 || Math.abs(deltaY) > 10) {
+      swipeDirection.value = Math.abs(deltaX) > Math.abs(deltaY) ? 'horizontal' : 'vertical'
+    }
   }
+
+  if (swipeDirection.value !== 'horizontal') return
+  if (step.value !== 2) return
+
+  e.preventDefault()
+
+  if (deltaX > 0 && !hasPrevChapter.value) return
+  if (deltaX < 0 && !hasNextChapter.value) return
+
+  isSwiping.value = true
+  touchDeltaX.value = deltaX
 }
 
 function onTouchEnd() {
-  if (isSwiping.value && touchDeltaX.value > window.innerWidth * 0.3) {
-    goBack()
+  if (isSwiping.value && step.value === 2) {
+    const threshold = window.innerWidth * 0.25
+    if (touchDeltaX.value > threshold && hasPrevChapter.value) {
+      goToChapter(currentChapterIndex.value - 1)
+    } else if (touchDeltaX.value < -threshold && hasNextChapter.value) {
+      goToChapter(currentChapterIndex.value + 1)
+    }
   }
   touchDeltaX.value = 0
   isSwiping.value = false
+  swipeDirection.value = null
 }
 
 const currentInputMode = computed(() => {
@@ -182,106 +206,113 @@ const headerTitle = computed(() => {
 </script>
 
 <template>
-  <div class="app-container"
-    @touchstart="onTouchStart"
-    @touchmove="onTouchMove"
-    @touchend="onTouchEnd"
-  >
-    <!-- Header -->
-    <header class="app-header">
-      <button v-if="step > 0" class="back-btn" @click="goBack">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M15 18l-6-6 6-6"/>
-        </svg>
-      </button>
-      <h1 class="header-title">{{ headerTitle }}</h1>
-    </header>
+  <q-layout view="hHh lpR fFf">
+    <q-header elevated class="bg-primary">
+      <q-toolbar>
+        <q-btn
+          v-if="step > 0"
+          flat
+          dense
+          round
+          icon="arrow_back"
+          @click="goHome"
+        />
+        <q-toolbar-title>{{ headerTitle }}</q-toolbar-title>
+        <template v-if="step === 2">
+          <q-btn
+            flat dense round
+            icon="chevron_left"
+            :disable="!hasPrevChapter"
+            @click="goToChapter(currentChapterIndex - 1)"
+          />
+          <q-btn
+            flat dense round
+            icon="chevron_right"
+            :disable="!hasNextChapter"
+            @click="goToChapter(currentChapterIndex + 1)"
+          />
+        </template>
+      </q-toolbar>
+    </q-header>
 
-    <!-- Slides container -->
-    <div class="slides-wrapper">
+    <q-page-container>
       <div
-        class="slides-track"
-        :style="{
-          transform: `translateX(calc(${-step * 100}% + ${touchDeltaX}px))`,
-          transition: isSwiping ? 'none' : 'transform 0.3s ease'
-        }"
+        class="app-content"
+        @touchstart="onTouchStart"
+        @touchmove="onTouchMove"
+        @touchend="onTouchEnd"
       >
-        <!-- Slide 0: Books -->
-        <div class="slide">
-          <BookSelector
-            :books="inputOpen ? filteredBooks : books"
-            @select="selectBook"
-          />
+        <div class="slides-wrapper">
+          <div
+            class="slides-track"
+            :style="{
+              transform: `translateX(calc(${-step * 100}% + ${step === 2 ? touchDeltaX : 0}px))`,
+              transition: isSwiping ? 'none' : 'transform 0.3s ease'
+            }"
+          >
+            <div class="slide">
+              <BookSelector
+                :books="inputOpen ? filteredBooks : books"
+                @select="selectBook"
+              />
+            </div>
+
+            <div class="slide">
+              <ChapterSelector
+                v-if="selectedBook"
+                :chapters="inputOpen ? filteredChapters : chapters"
+                :book-name="selectedBook?.name"
+                @select="selectChapter"
+              />
+            </div>
+
+            <div class="slide slide-verses">
+              <VerseViewer
+                v-if="selectedChapter"
+                :verses="verses"
+                :book-name="selectedBook?.name"
+                :chapter-number="selectedChapter?.number"
+              />
+            </div>
+          </div>
         </div>
 
-        <!-- Slide 1: Chapters -->
-        <div class="slide">
-          <ChapterSelector
-            v-if="selectedBook"
-            :chapters="inputOpen ? filteredChapters : chapters"
-            :book-name="selectedBook?.name"
-            @select="selectChapter"
-          />
-        </div>
-
-        <!-- Slide 2: Verses -->
-        <div class="slide">
-          <VerseViewer
-            v-if="selectedChapter"
-            :verses="verses"
-            :book-name="selectedBook?.name"
-            :chapter-number="selectedChapter?.number"
-          />
-        </div>
+        <SearchInput
+          v-model="searchQuery"
+          :input-mode="currentInputMode"
+          :placeholder="currentPlaceholder"
+          :is-open="inputOpen"
+          @enter="handleEnter"
+          @open="inputOpen = true"
+        />
       </div>
-    </div>
-
-    <!-- Search Input -->
-    <SearchInput
-      v-model="searchQuery"
-      :input-mode="currentInputMode"
-      :placeholder="currentPlaceholder"
-      :is-open="inputOpen"
-      @enter="handleEnter"
-      @open="inputOpen = true"
-      ref="searchInputRef"
-    />
-  </div>
+    </q-page-container>
+  </q-layout>
 </template>
 
-<style scoped>
-.app-container {
+<style>
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  height: 100%;
+  height: 100dvh;
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
+}
+
+.app-content {
   height: 100%;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: #f5f5f5;
 }
 
-.app-header {
-  display: flex;
-  align-items: center;
-  padding: 12px 16px;
-  background: #4a6da7;
-  color: white;
-  min-height: 56px;
-  z-index: 10;
-}
-
-.back-btn {
-  background: none;
-  border: none;
-  color: white;
-  padding: 4px;
-  margin-right: 8px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-}
-
-.header-title {
-  font-size: 1.2rem;
-  font-weight: 500;
+.q-page-container {
+  height: 100vh;
+  height: 100dvh;
 }
 
 .slides-wrapper {

@@ -2,10 +2,27 @@
 
 Leitor da Bíblia (Tradução do Novo Mundo) em formato web, mobile only, inspirado no visual do [jw.org/biblia](https://www.jw.org/pt/biblioteca/biblia/).
 
+**Repo:** https://github.com/marcelostsh/biblia-nwt
+
 ## Stack
 
-- **Vue 3** + **Vite**
-- Dados extraídos do EPUB `nwt_T.epub` (já extraído em `epub_temp/`)
+- **Vue 3** + **Vite 8**
+- Dados extraídos do EPUB `nwt_T.epub` → `src/data/bible.json`
+- Script de parsing: `parse-epub.js`
+
+## Status
+
+- [x] EPUB parseado (66 livros, 1189 capítulos, 31078 versículos)
+- [x] Wizard horizontal com slide (Livro → Capítulo → Versículos)
+- [x] Swipe back (arrastar pra direita volta)
+- [x] Input de busca fixo no rodapé
+- [x] Filtro em tempo real com auto-avanço
+- [x] Enter/OK pega primeiro da lista
+- [x] Teclado texto (livros) / numérico (capítulos e versículos)
+- [x] Filtro de livros com startsWith, ignora acentos e maiúsculas
+- [x] Teclado sobrepõe conteúdo (não empurra)
+- [x] Input continua aberto se navegou via busca, fecha se tocou na tela
+- [x] Teclado fecha ao chegar no versículo
 
 ## Conceito
 
@@ -20,65 +37,84 @@ Fluxo linear em 3 etapas com transição de slide horizontal:
 ```
 
 ### Tela 1 - Seleção de Livro
-- Lista dos 66 livros da Bíblia
-- Ao selecionar um livro, avança com slide para a próxima tela
+- Lista dos 66 livros em grid 2 colunas
+- Separados por Escrituras Hebraicas / Gregas
 
 ### Tela 2 - Seleção de Capítulo
-- Grid com os números dos capítulos do livro selecionado
-- Ao selecionar um capítulo, avança com slide para a próxima tela
+- Grid 5 colunas com números dos capítulos
 
 ### Tela 3 - Versículos (Conteúdo)
-- Exibe o texto do capítulo com os versículos
+- Texto do capítulo com versículos numerados
+- Highlight temporário ao navegar via busca
 
 ### Gestos (Swipe)
-- **Swipe para direita (voltar):** sempre permitido, volta para a tela anterior
-- **Avançar:** somente selecionando uma opção (não é possível avançar com swipe sem escolher)
+- **Swipe para direita (voltar):** sempre permitido
+- **Avançar:** somente selecionando uma opção
 
 ## Input de Busca no Rodapé
 
-Input fixo no rodapé da tela, posicionado para fácil acesso com o polegar.
+Input fixo no rodapé, sempre visível, posicionado para o polegar.
 
 ### Comportamento
 
-- Filtra as opções **em tempo real** conforme o usuário digita
-- Se restar **apenas uma ocorrência**, avança automaticamente para o próximo slide
-- **Enter/OK no teclado** seleciona o **primeiro item da lista filtrada** e avança (não anula o auto-avanço, são dois caminhos complementares)
-- O autocomplete, uma vez acionado, **permanece aberto** durante toda a navegação
-- O input **limpa automaticamente** a cada transição de slide, pronto para o próximo filtro
-- O input só **fecha** quando o conteúdo final (versículos) é exibido
+- Filtra em **tempo real** conforme digita
+- Livros: **startsWith**, ignora acentos e maiúsculas ("gen" → Gênesis)
+- Se restar **1 ocorrência** → avança automaticamente
+- **Enter/OK** → seleciona primeiro da lista e avança
+- Navegou via **busca** → input continua aberto no próximo slide
+- Navegou via **toque na lista** → input fecha
+- Ao chegar no **versículo** → teclado fecha (blur)
+- Input **limpa** a cada transição
 
 ### Teclado por Etapa
 
 | Etapa | Teclado | Exemplo |
 |-------|---------|---------|
-| Livro | Texto | digitar "gên" → filtra → "Gênesis" → avança |
-| Capítulo | Numérico | digitar "3" → filtra → avança |
-| Versículo | Numérico | digitar "16" → abre conteúdo → fecha input |
+| Livro | Texto | "gen" → Gênesis → avança |
+| Capítulo | Numérico | "3" → avança |
+| Versículo | Numérico | "16" → scroll + highlight → fecha |
 
-### Fluxo Completo com Input
+### Fluxo Completo
 
 ```
-"gên" → auto-avança → "3" → auto-avança → "16" → exibe versículo → input fecha
+"gen" → auto-avança → "3" → auto-avança → "16" → exibe versículo → teclado fecha
 ```
-
-Chegar em qualquer versículo com poucos toques, sem precisar dar scroll na lista.
 
 ## Visual
 
 Inspirado no jw.org:
-- Design limpo, fundo claro
-- Tipografia sóbria e legível
-- Cores neutras com destaques em azul/cinza
+- Design limpo, fundo #f5f5f5
+- Header azul #4a6da7
+- Cards brancos com bordas suaves
+- Tipografia sóbria, versículos com número em azul superscript
 
-## Dados
+## Estrutura
 
-- EPUB original: `nwt_T.epub`
-- Conteúdo extraído: `epub_temp/OEBPS/` (3940 arquivos XHTML)
-- Os XHTMLs precisam ser parseados para extrair a estrutura de livros, capítulos e versículos
+```
+src/
+  App.vue              — lógica principal, wizard, swipe, busca
+  main.js              — entry point
+  assets/main.css      — reset e estilos globais
+  components/
+    BookSelector.vue   — grid de livros
+    ChapterSelector.vue — grid de capítulos
+    VerseViewer.vue    — exibição dos versículos
+    SearchInput.vue    — input fixo no rodapé
+  data/
+    bible.json         — dados parseados (66 livros, ~7MB)
+parse-epub.js          — script Node que parseia o EPUB
+epub_temp/             — EPUB extraído (não vai pro git)
+nwt_T.epub             — EPUB original (não vai pro git)
+```
 
 ## Setup
 
 ```sh
 npm install
 npm run dev
+```
+
+Para re-parsear o EPUB (se necessário):
+```sh
+node parse-epub.js
 ```

@@ -1,0 +1,19 @@
+{
+  "name": "Bíblia NWT",
+  "short_name": "Bíblia",
+  "description": "Leitor da Bíblia - Tradução do Novo Mundo",
+  "theme_color": "#4a6da7",
+  "background_color": "#1d1d1d",
+  "display": "standalone",
+  "orientation": "portrait",
+  "scope": "/biblia-nwt/",
+  "start_url": "/biblia-nwt/",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

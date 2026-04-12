@@ -4,12 +4,27 @@ defineProps({
   bookName: { type: String, required: true }
 })
 
-const emit = defineEmits(['select'])
+const emit = defineEmits(['select', 'clear'])
 </script>
 
 <template>
   <div class="q-pa-md" style="padding-bottom: 80px">
-    <div class="chapter-grid">
+    <!-- Empty state -->
+    <div v-if="chapters.length === 0" class="empty-state">
+      <q-icon name="search_off" size="48px" color="grey-5" />
+      <div class="text-grey-6 q-mt-sm">Nenhum capítulo encontrado</div>
+      <q-btn
+        flat
+        no-caps
+        color="primary"
+        label="Limpar busca"
+        icon="backspace"
+        class="q-mt-md"
+        @click="emit('clear')"
+      />
+    </div>
+
+    <div v-else class="chapter-grid">
       <q-btn
         v-for="chapter in chapters"
         :key="chapter.number"
@@ -24,6 +39,14 @@ const emit = defineEmits(['select'])
 </template>
 
 <style scoped>
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding-top: 25vh;
+}
+
 .chapter-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);

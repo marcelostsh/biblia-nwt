@@ -162,7 +162,10 @@ function goToChapters() {
   inputOpen.value = true
 }
 
-function openVerseInput() {
+function openInput() {
+  if (!inputOpen.value && step.value === 2) {
+    history.pushState({ step: 2, input: true }, '')
+  }
   inputOpen.value = true
 }
 
@@ -349,7 +352,17 @@ const headerTitle = computed(() => {
   return `${selectedBook.value?.name} ${selectedChapter.value?.number}`
 })
 
+function closeInput() {
+  inputOpen.value = false
+  searchQuery.value = ''
+  document.activeElement?.blur()
+}
+
 function onPopState() {
+  if (inputOpen.value && step.value === 2) {
+    closeInput()
+    return
+  }
   if (step.value === 2) {
     if (chapters.value.length <= 1) {
       goHome()
@@ -422,6 +435,7 @@ onUnmounted(() => {
               <BookSelector
                 :books="inputOpen ? filteredBooks : books"
                 @select="selectBook"
+                @clear="searchQuery = ''"
               />
             </div>
 
@@ -431,6 +445,7 @@ onUnmounted(() => {
                 :chapters="inputOpen ? filteredChapters : chapters"
                 :book-name="selectedBook?.name"
                 @select="selectChapter"
+                @clear="searchQuery = ''"
               />
             </div>
           </div>
@@ -495,10 +510,11 @@ onUnmounted(() => {
           :total-verses="verses.length"
           :multi-chapter="chapters.length > 1"
           @enter="handleEnter"
-          @open="inputOpen = true"
+          @open="openInput"
+          @close="closeInput"
           @goto-books="goHome"
           @goto-chapters="goToChapters"
-          @goto-verse="openVerseInput"
+          @goto-verse="openInput"
         />
       </div>
     </q-page-container>

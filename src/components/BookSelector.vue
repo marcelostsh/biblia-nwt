@@ -3,7 +3,7 @@ defineProps({
   books: { type: Array, required: true }
 })
 
-const emit = defineEmits(['select'])
+const emit = defineEmits(['select', 'clear'])
 
 function testamentLabel(testament) {
   return testament === 'hebrew' ? 'Escrituras Hebraicas' : 'Escrituras Gregas'
@@ -12,7 +12,22 @@ function testamentLabel(testament) {
 
 <template>
   <div class="q-pa-sm" style="padding-bottom: 80px">
-    <template v-for="testament in ['hebrew', 'greek']" :key="testament">
+    <!-- Empty state -->
+    <div v-if="books.length === 0" class="empty-state">
+      <q-icon name="search_off" size="48px" color="grey-5" />
+      <div class="text-grey-6 q-mt-sm">Nenhum livro encontrado</div>
+      <q-btn
+        flat
+        no-caps
+        color="primary"
+        label="Limpar busca"
+        icon="backspace"
+        class="q-mt-md"
+        @click="emit('clear')"
+      />
+    </div>
+
+    <template v-else v-for="testament in ['hebrew', 'greek']" :key="testament">
       <q-item-label
         header
         class="text-primary text-weight-bold text-uppercase"
@@ -48,6 +63,14 @@ function testamentLabel(testament) {
 </template>
 
 <style scoped>
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding-top: 25vh;
+}
+
 .book-card {
   border-radius: 8px;
   transition: background 0.15s;

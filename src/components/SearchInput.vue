@@ -72,6 +72,14 @@ watch(() => props.isOpen, (val) => {
         <template v-slot:prepend>
           <q-icon name="search" color="grey-6" />
         </template>
+        <template v-slot:append>
+          <q-icon
+            name="close"
+            color="grey-6"
+            class="cursor-pointer"
+            @click.stop="emit('close')"
+          />
+        </template>
       </q-input>
     </div>
   </div>

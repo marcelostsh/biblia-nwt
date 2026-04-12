@@ -12,12 +12,18 @@ const selectedChapter = ref(null)
 const searchQuery = ref('')
 const inputOpen = ref(true)
 
-// Touch handling
+// Touch handling for selection slides (step 0-1)
+const selectionTouchStartX = ref(0)
+const selectionDeltaX = ref(0)
+const selectionSwiping = ref(false)
+
+// Touch handling for chapter carousel (step 2)
 const touchStartX = ref(0)
 const touchStartY = ref(0)
 const touchDeltaX = ref(0)
 const isSwiping = ref(false)
 const swipeDirection = ref(null)
+const isAnimating = ref(false)
 
 const books = computed(() => bible.books)
 
@@ -38,6 +44,17 @@ const currentChapterIndex = computed(() => {
 
 const hasPrevChapter = computed(() => currentChapterIndex.value > 0)
 const hasNextChapter = computed(() => currentChapterIndex.value < chapters.value.length - 1)
+
+// Carousel: previous, current, next chapter data
+const prevChapter = computed(() => {
+  if (!hasPrevChapter.value) return null
+  return chapters.value[currentChapterIndex.value - 1]
+})
+
+const nextChapter = computed(() => {
+  if (!hasNextChapter.value) return null
+  return chapters.value[currentChapterIndex.value + 1]
+})
 
 function normalize(str) {
   return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
@@ -128,8 +145,10 @@ function goToChapter(index) {
     selectedChapter.value = chapters.value[index]
     searchQuery.value = ''
     nextTick(() => {
-      const slide = document.querySelector('.slide-verses')
-      if (slide) slide.scrollTop = 0
+      // Scroll all carousel panels to top
+      document.querySelectorAll('.carousel-panel').forEach(el => {
+        el.scrollTop = 0
+      })
     })
   }
 }
@@ -144,7 +163,9 @@ function handleEnter() {
   }
 }
 
-function onTouchStart(e) {
+// Chapter carousel touch handling
+function onCarouselTouchStart(e) {
+  if (isAnimating.value) return
   touchStartX.value = e.touches[0].clientX
   touchStartY.value = e.touches[0].clientY
   touchDeltaX.value = 0
@@ -152,7 +173,8 @@ function onTouchStart(e) {
   swipeDirection.value = null
 }
 
-function onTouchMove(e) {
+function onCarouselTouchMove(e) {
+  if (isAnimating.value) return
   const deltaX = e.touches[0].clientX - touchStartX.value
   const deltaY = e.touches[0].clientY - touchStartY.value
 
@@ -163,27 +185,56 @@ function onTouchMove(e) {
   }
 
   if (swipeDirection.value !== 'horizontal') return
-  if (step.value !== 2) return
 
   e.preventDefault()
 
-  if (deltaX > 0 && !hasPrevChapter.value) return
-  if (deltaX < 0 && !hasNextChapter.value) return
+  // Block swipe if no chapter in that direction
+  if (deltaX > 0 && !hasPrevChapter.value) {
+    touchDeltaX.value = deltaX * 0.2 // rubber band effect
+    isSwiping.value = true
+    return
+  }
+  if (deltaX < 0 && !hasNextChapter.value) {
+    touchDeltaX.value = deltaX * 0.2
+    isSwiping.value = true
+    return
+  }
 
   isSwiping.value = true
   touchDeltaX.value = deltaX
 }
 
-function onTouchEnd() {
-  if (isSwiping.value && step.value === 2) {
-    const threshold = window.innerWidth * 0.25
-    if (touchDeltaX.value > threshold && hasPrevChapter.value) {
-      goToChapter(currentChapterIndex.value - 1)
-    } else if (touchDeltaX.value < -threshold && hasNextChapter.value) {
-      goToChapter(currentChapterIndex.value + 1)
-    }
+function onCarouselTouchEnd() {
+  if (!isSwiping.value) {
+    swipeDirection.value = null
+    return
   }
-  touchDeltaX.value = 0
+
+  const threshold = window.innerWidth * 0.25
+
+  if (touchDeltaX.value > threshold && hasPrevChapter.value) {
+    // Animate to prev
+    isAnimating.value = true
+    touchDeltaX.value = window.innerWidth
+    setTimeout(() => {
+      goToChapter(currentChapterIndex.value - 1)
+      touchDeltaX.value = 0
+      isAnimating.value = false
+    }, 300)
+  } else if (touchDeltaX.value < -threshold && hasNextChapter.value) {
+    // Animate to next
+    isAnimating.value = true
+    touchDeltaX.value = -window.innerWidth
+    setTimeout(() => {
+      goToChapter(currentChapterIndex.value + 1)
+      touchDeltaX.value = 0
+      isAnimating.value = false
+    }, 300)
+  } else {
+    // Snap back
+    touchDeltaX.value = 0
+  }
+
   isSwiping.value = false
   swipeDirection.value = null
 }
@@ -236,18 +287,14 @@ const headerTitle = computed(() => {
     </q-header>
 
     <q-page-container>
-      <div
-        class="app-content"
-        @touchstart="onTouchStart"
-        @touchmove="onTouchMove"
-        @touchend="onTouchEnd"
-      >
-        <div class="slides-wrapper">
+      <div class="app-content">
+        <!-- Selection mode: books & chapters -->
+        <div v-if="step < 2" class="slides-wrapper">
           <div
             class="slides-track"
             :style="{
-              transform: `translateX(calc(${-step * 100}% + ${step === 2 ? touchDeltaX : 0}px))`,
-              transition: isSwiping ? 'none' : 'transform 0.3s ease'
+              transform: `translateX(${-step * 100}%)`,
+              transition: 'transform 0.3s ease'
             }"
           >
             <div class="slide">
@@ -265,8 +312,36 @@ const headerTitle = computed(() => {
                 @select="selectChapter"
               />
             </div>
+          </div>
+        </div>
 
-            <div class="slide slide-verses">
+        <!-- Reading mode: chapter carousel -->
+        <div
+          v-else
+          class="carousel-wrapper"
+          @touchstart="onCarouselTouchStart"
+          @touchmove="onCarouselTouchMove"
+          @touchend="onCarouselTouchEnd"
+        >
+          <div
+            class="carousel-track"
+            :style="{
+              transform: `translateX(calc(-100% + ${touchDeltaX}px))`,
+              transition: isSwiping ? 'none' : 'transform 0.3s ease'
+            }"
+          >
+            <!-- Prev chapter panel -->
+            <div class="carousel-panel">
+              <VerseViewer
+                v-if="prevChapter"
+                :verses="prevChapter.verses"
+                :book-name="selectedBook?.name"
+                :chapter-number="prevChapter.number"
+              />
+            </div>
+
+            <!-- Current chapter panel -->
+            <div class="carousel-panel">
               <VerseViewer
                 v-if="selectedChapter"
                 :verses="verses"
@@ -274,9 +349,20 @@ const headerTitle = computed(() => {
                 :chapter-number="selectedChapter?.number"
               />
             </div>
+
+            <!-- Next chapter panel -->
+            <div class="carousel-panel">
+              <VerseViewer
+                v-if="nextChapter"
+                :verses="nextChapter.verses"
+                :book-name="selectedBook?.name"
+                :chapter-number="nextChapter.number"
+              />
+            </div>
           </div>
         </div>
 
+        <!-- Search Input -->
         <SearchInput
           v-model="searchQuery"
           :input-mode="currentInputMode"
@@ -329,6 +415,26 @@ html, body {
 
 .slide {
   min-width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Chapter carousel */
+.carousel-wrapper {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+.carousel-track {
+  display: flex;
+  height: 100%;
+  will-change: transform;
+}
+
+.carousel-panel {
+  min-width: 100vw;
   height: 100%;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;

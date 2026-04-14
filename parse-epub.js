@@ -83,8 +83,8 @@ function parseChapterFile(filename) {
 
   let body = bodyMatch[1];
 
-  // Remove footnote sections
-  body = body.replace(/<div class="groupFootnote">[\s\S]*?<\/div>\s*(<\/div>)?/g, '');
+  // Remove footnote sections (everything from groupFootnote to end of content)
+  body = body.replace(/<div class="groupFootnote">[\s\S]*$/g, '');
 
   // Remove navigation paragraph
   body = body.replace(/<p class="w_navigation[^"]*">[\s\S]*?<\/p>/g, '');

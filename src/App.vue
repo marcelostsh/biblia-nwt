@@ -5,6 +5,24 @@ import BookSelector from './components/BookSelector.vue'
 import ChapterSelector from './components/ChapterSelector.vue'
 import VerseViewer from './components/VerseViewer.vue'
 import SearchInput from './components/SearchInput.vue'
+import SettingsDialog from './components/SettingsDialog.vue'
+import AISearchDialog from './components/AISearchDialog.vue'
+
+const settingsOpen = ref(false)
+const aiSearchOpen = ref(false)
+
+function openReference({ book, chapter, verse }) {
+  selectedBook.value = book
+  selectedChapter.value = chapter
+  searchQuery.value = ''
+  step.value = 2
+  inputOpen.value = false
+  history.pushState({ step: 2 }, '')
+  nextTick(() => {
+    document.querySelectorAll('.carousel-panel').forEach(el => { el.scrollTop = 0 })
+    setTimeout(() => scrollToVerse(verse), 100)
+  })
+}
 
 const step = ref(0) // 0=book, 1=chapter, 2=verses
 const selectedBook = ref(null)
@@ -411,8 +429,27 @@ onUnmounted(() => {
             @click="goToChapter(currentChapterIndex + 1)"
           />
         </template>
+        <q-btn flat dense round icon="more_vert">
+          <q-menu>
+            <q-list style="min-width: 180px">
+              <q-item clickable v-close-popup @click="settingsOpen = true">
+                <q-item-section avatar>
+                  <q-icon name="settings" />
+                </q-item-section>
+                <q-item-section>Configurações</q-item-section>
+              </q-item>
+            </q-list>
+          </q-menu>
+        </q-btn>
       </q-toolbar>
     </q-header>
+
+    <SettingsDialog v-model="settingsOpen" />
+    <AISearchDialog
+      v-model="aiSearchOpen"
+      @open-reference="openReference"
+      @open-settings="settingsOpen = true"
+    />
 
     <q-page-container>
       <div class="app-content">
@@ -497,6 +534,15 @@ onUnmounted(() => {
             </div>
           </div>
         </div>
+
+        <!-- AI Search FAB -->
+        <q-btn
+          fab
+          icon="auto_awesome"
+          color="secondary"
+          class="ai-fab"
+          @click="aiSearchOpen = true"
+        />
 
         <!-- Search Input -->
         <SearchInput
@@ -583,5 +629,12 @@ html, body {
   height: 100%;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+}
+
+.ai-fab {
+  position: fixed;
+  right: 16px;
+  bottom: 88px;
+  z-index: 100;
 }
 </style>

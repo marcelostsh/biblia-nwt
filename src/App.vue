@@ -7,9 +7,11 @@ import VerseViewer from './components/VerseViewer.vue'
 import SearchInput from './components/SearchInput.vue'
 import SettingsDialog from './components/SettingsDialog.vue'
 import AISearchDialog from './components/AISearchDialog.vue'
+import FontSizeDialog from './components/FontSizeDialog.vue'
 
 const settingsOpen = ref(false)
 const aiSearchOpen = ref(false)
+const fontSizeOpen = ref(false)
 
 function openReference({ book, chapter, verse }) {
   selectedBook.value = book
@@ -395,6 +397,10 @@ function onPopState() {
 onMounted(() => {
   history.replaceState({ step: 0 }, '')
   window.addEventListener('popstate', onPopState)
+  const uiSize = localStorage.getItem('font_size_ui')
+  const textSize = localStorage.getItem('font_size_text')
+  if (uiSize) document.documentElement.style.setProperty('--font-size-ui', uiSize + 'px')
+  if (textSize) document.documentElement.style.setProperty('--font-size-text', textSize + 'px')
 })
 
 onUnmounted(() => {
@@ -434,9 +440,15 @@ onUnmounted(() => {
             <q-list style="min-width: 180px">
               <q-item clickable v-close-popup @click="settingsOpen = true">
                 <q-item-section avatar>
-                  <q-icon name="settings" />
+                  <q-icon name="key" />
                 </q-item-section>
-                <q-item-section>Configurações</q-item-section>
+                <q-item-section>Chave da IA</q-item-section>
+              </q-item>
+              <q-item clickable v-close-popup @click="fontSizeOpen = true">
+                <q-item-section avatar>
+                  <q-icon name="text_fields" />
+                </q-item-section>
+                <q-item-section>Tamanho da Fonte</q-item-section>
               </q-item>
             </q-list>
           </q-menu>
@@ -445,6 +457,7 @@ onUnmounted(() => {
     </q-header>
 
     <SettingsDialog v-model="settingsOpen" />
+    <FontSizeDialog v-model="fontSizeOpen" />
     <AISearchDialog
       v-model="aiSearchOpen"
       @open-reference="openReference"
@@ -578,6 +591,7 @@ html, body {
   overflow: hidden;
   position: fixed;
   width: 100%;
+  font-size: var(--font-size-ui, 16px);
 }
 
 .app-content {

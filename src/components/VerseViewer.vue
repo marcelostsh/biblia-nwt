@@ -34,7 +34,7 @@ defineProps({
 .verse {
   margin-bottom: 4px;
   line-height: 1.7;
-  font-size: 1rem;
+  font-size: var(--font-size-text, 1rem);
   color: #333;
   transition: background 0.3s;
   padding: 2px 4px;
@@ -43,7 +43,7 @@ defineProps({
 
 .chapter-number {
   float: left;
-  font-size: 2.8rem;
+  font-size: calc(var(--font-size-text, 16px) * 2.8);
   font-weight: 700;
   line-height: 0.85;
   color: var(--q-primary);
@@ -56,7 +56,7 @@ defineProps({
 }
 
 .verse-number {
-  font-size: 0.75rem;
+  font-size: calc(var(--font-size-text, 16px) * 0.75);
   font-weight: 700;
   color: var(--q-primary);
   vertical-align: super;

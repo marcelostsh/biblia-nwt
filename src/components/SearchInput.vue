@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch, nextTick } from 'vue'
+import { ref, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 
 const props = defineProps({
   modelValue: { type: String, default: '' },
@@ -16,6 +16,48 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue', 'enter', 'open', 'close', 'goto-books', 'goto-chapters', 'goto-verse'])
 
 const inputEl = ref(null)
+
+// Sobe a barra de busca junto com o teclado do celular.
+// Usa a Visual Viewport API: quando o teclado abre, a viewport encolhe;
+// a gente empurra a barra pra cima pela mesma altura, colada no teclado.
+const keyboardOffset = ref(0)
+
+function updateKeyboardOffset() {
+  const vv = window.visualViewport
+  if (!vv) return
+  const overlap = window.innerHeight - vv.height - vv.offsetTop
+  keyboardOffset.value = overlap > 80 ? overlap : 0
+}
+
+onMounted(() => {
+  const vv = window.visualViewport
+  if (!vv) return
+  vv.addEventListener('resize', updateKeyboardOffset)
+  vv.addEventListener('scroll', updateKeyboardOffset)
+})
+
+onBeforeUnmount(() => {
+  const vv = window.visualViewport
+  if (!vv) return
+  vv.removeEventListener('resize', updateKeyboardOffset)
+  vv.removeEventListener('scroll', updateKeyboardOffset)
+})
+
+// X: se tem texto, limpa; se já está vazio, fecha a busca (some o teclado).
+function onClear() {
+  if (props.modelValue) {
+    emit('update:modelValue', '')
+  } else {
+    // Android ignora blur() puro; travar o campo por um instante força o teclado a cair.
+    const el = inputEl.value?.$el?.querySelector('input')
+    if (el) {
+      el.setAttribute('readonly', 'readonly')
+      el.blur()
+      setTimeout(() => el.removeAttribute('readonly'), 300)
+    }
+    emit('close')
+  }
+}
 
 function focusInput() {
   if (!props.isOpen) {
@@ -38,7 +80,7 @@ watch(() => props.isOpen, (val) => {
 </script>
 
 <template>
-  <div class="search-bar">
+  <div class="search-bar" :style="{ transform: `translateY(-${keyboardOffset}px)` }">
     <!-- Breadcrumb when reading and input closed -->
     <div v-if="step === 2 && !isOpen" class="breadcrumb" @click.stop>
       <span class="crumb crumb-book" @click="emit('goto-books')">{{ bookName }}</span>
@@ -54,13 +96,13 @@ watch(() => props.isOpen, (val) => {
     <div v-else @click="focusInput">
       <q-input
         ref="inputEl"
+        class="search-field"
         :model-value="modelValue"
         @update:model-value="emit('update:modelValue', $event)"
         @keydown.enter.prevent="emit('enter')"
         :placeholder="placeholder"
         :inputmode="inputMode"
         :type="inputMode === 'numeric' ? 'tel' : 'text'"
-        dense
         rounded
         outlined
         bg-color="grey-2"
@@ -70,14 +112,15 @@ watch(() => props.isOpen, (val) => {
         spellcheck="false"
       >
         <template v-slot:prepend>
-          <q-icon name="search" color="grey-6" />
+          <q-icon name="search" color="grey-6" size="26px" />
         </template>
         <template v-slot:append>
           <q-icon
             name="close"
             color="grey-6"
+            size="26px"
             class="cursor-pointer"
-            @click.stop="emit('close')"
+            @click.stop="onClear"
           />
         </template>
       </q-input>
@@ -91,12 +134,28 @@ watch(() => props.isOpen, (val) => {
   bottom: 0;
   left: 0;
   right: 0;
-  padding: 8px 12px;
-  padding-bottom: max(8px, env(safe-area-inset-bottom));
+  padding: 10px 12px;
+  padding-bottom: max(10px, env(safe-area-inset-bottom));
   background: white;
   border-top: 1px solid #e0e0e0;
   box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.08);
   z-index: 20;
+  transition: transform 0.18s ease-out;
+}
+
+/* Campo de busca com alvo de toque confortável (~56px) */
+.search-field :deep(.q-field__control) {
+  height: 56px;
+  border-radius: 28px;
+}
+.search-field :deep(.q-field__marginal) {
+  height: 56px;
+}
+.search-field :deep(.q-field__native) {
+  font-size: 1.15rem;
+}
+.search-field :deep(.q-field__native::placeholder) {
+  font-size: 1.1rem;
 }
 
 .breadcrumb {

@@ -9,11 +9,13 @@ import SettingsDialog from './components/SettingsDialog.vue'
 import AISearchDialog from './components/AISearchDialog.vue'
 import FontSizeDialog from './components/FontSizeDialog.vue'
 import ChapterSummaryDialog from './components/ChapterSummaryDialog.vue'
+import AboutDialog from './components/AboutDialog.vue'
 
 const settingsOpen = ref(false)
 const aiSearchOpen = ref(false)
 const fontSizeOpen = ref(false)
 const summaryOpen = ref(false)
+const aboutOpen = ref(false)
 
 function openReference({ book, chapter, verse }) {
   selectedBook.value = book
@@ -453,6 +455,13 @@ onUnmounted(() => {
                 </q-item-section>
                 <q-item-section>Tamanho da Fonte</q-item-section>
               </q-item>
+              <q-separator />
+              <q-item clickable v-close-popup @click="aboutOpen = true">
+                <q-item-section avatar>
+                  <q-icon name="info" />
+                </q-item-section>
+                <q-item-section>Sobre</q-item-section>
+              </q-item>
             </q-list>
           </q-menu>
         </q-btn>
@@ -461,6 +470,7 @@ onUnmounted(() => {
 
     <SettingsDialog v-model="settingsOpen" />
     <FontSizeDialog v-model="fontSizeOpen" />
+    <AboutDialog v-model="aboutOpen" />
     <ChapterSummaryDialog
       v-model="summaryOpen"
       :book-name="selectedBook?.name || ''"

@@ -24,6 +24,10 @@ app.mount('#app')
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/biblia-nwt/sw.js')
+    // ?v= muda a cada release: o browser vê um script novo e reinstala o SW.
+    navigator.serviceWorker
+      .register(`${import.meta.env.BASE_URL}sw.js?v=${__APP_VERSION__}`)
+      .then(reg => reg.update())
+      .catch(() => {})
   })
 }

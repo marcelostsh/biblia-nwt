@@ -8,10 +8,12 @@ import SearchInput from './components/SearchInput.vue'
 import SettingsDialog from './components/SettingsDialog.vue'
 import AISearchDialog from './components/AISearchDialog.vue'
 import FontSizeDialog from './components/FontSizeDialog.vue'
+import ChapterSummaryDialog from './components/ChapterSummaryDialog.vue'
 
 const settingsOpen = ref(false)
 const aiSearchOpen = ref(false)
 const fontSizeOpen = ref(false)
+const summaryOpen = ref(false)
 
 function openReference({ book, chapter, verse }) {
   selectedBook.value = book
@@ -435,6 +437,7 @@ onUnmounted(() => {
             @click="goToChapter(currentChapterIndex + 1)"
           />
         </template>
+        <q-btn flat dense round icon="auto_awesome" @click="aiSearchOpen = true" />
         <q-btn flat dense round icon="more_vert">
           <q-menu>
             <q-list style="min-width: 180px">
@@ -458,6 +461,13 @@ onUnmounted(() => {
 
     <SettingsDialog v-model="settingsOpen" />
     <FontSizeDialog v-model="fontSizeOpen" />
+    <ChapterSummaryDialog
+      v-model="summaryOpen"
+      :book-name="selectedBook?.name || ''"
+      :chapter-number="selectedChapter?.number || 0"
+      :verses="verses"
+      @open-settings="settingsOpen = true"
+    />
     <AISearchDialog
       v-model="aiSearchOpen"
       @open-reference="openReference"
@@ -548,15 +558,6 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <!-- AI Search FAB -->
-        <q-btn
-          fab
-          icon="auto_awesome"
-          color="secondary"
-          class="ai-fab"
-          @click="aiSearchOpen = true"
-        />
-
         <!-- Search Input -->
         <SearchInput
           v-model="searchQuery"
@@ -574,6 +575,7 @@ onUnmounted(() => {
           @goto-books="goHome"
           @goto-chapters="goToChapters"
           @goto-verse="openInput"
+          @summarize="summaryOpen = true"
         />
       </div>
     </q-page-container>
@@ -643,12 +645,5 @@ html, body {
   height: 100%;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-}
-
-.ai-fab {
-  position: fixed;
-  right: 16px;
-  bottom: 88px;
-  z-index: 100;
 }
 </style>

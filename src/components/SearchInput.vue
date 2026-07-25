@@ -13,7 +13,7 @@ const props = defineProps({
   multiChapter: { type: Boolean, default: true }
 })
 
-const emit = defineEmits(['update:modelValue', 'enter', 'open', 'close', 'goto-books', 'goto-chapters', 'goto-verse'])
+const emit = defineEmits(['update:modelValue', 'enter', 'open', 'close', 'goto-books', 'goto-chapters', 'goto-verse', 'summarize'])
 
 const inputEl = ref(null)
 
@@ -85,11 +85,19 @@ watch(() => props.isOpen, (val) => {
     <div v-if="step === 2 && !isOpen" class="breadcrumb" @click.stop>
       <span class="crumb crumb-book" @click="emit('goto-books')">{{ bookName }}</span>
       <template v-if="multiChapter">
-        <q-icon name="chevron_right" size="18px" color="grey-5" />
+        <q-icon name="chevron_right" size="24px" color="grey-5" />
         <span class="crumb crumb-chapter" @click="emit('goto-chapters')">{{ chapterNumber }}</span>
       </template>
-      <q-icon name="chevron_right" size="18px" color="grey-5" />
+      <q-icon name="chevron_right" size="24px" color="grey-5" />
       <span class="crumb crumb-verses" @click="emit('goto-verse')">1-{{ totalVerses }}</span>
+      <q-btn
+        round
+        color="primary"
+        icon="auto_awesome"
+        size="12px"
+        class="summary-btn"
+        @click="emit('summarize')"
+      />
     </div>
 
     <!-- Input field -->
@@ -161,15 +169,16 @@ watch(() => props.isOpen, (val) => {
 .breadcrumb {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 8px 4px;
+  gap: 6px;
+  padding: 6px 4px;
+  min-height: 56px;
 }
 
 .crumb {
-  font-size: 0.95rem;
+  font-size: 1.15rem;
   font-weight: 600;
-  padding: 4px 10px;
-  border-radius: 8px;
+  padding: 10px 18px;
+  border-radius: 14px;
   color: var(--q-primary);
   background: #f0f0f0;
   cursor: pointer;
@@ -178,5 +187,9 @@ watch(() => props.isOpen, (val) => {
 
 .crumb:active {
   background: #e0e0e0;
+}
+
+.summary-btn {
+  margin-left: auto;
 }
 </style>

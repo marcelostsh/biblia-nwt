@@ -82,3 +82,94 @@ Regras:
 
   return JSON.parse(text)
 }
+
+export async function summarizeChapter(bookName, chapterNumber, versesText) {
+  const apiKey = localStorage.getItem('gemini_api_key')
+  const model = localStorage.getItem('gemini_model') || 'gemini-2.5-flash'
+
+  if (!apiKey) throw new Error('API key do Gemini não configurada')
+
+  const prompt = `Você é um estudioso da Bíblia (Tradução do Novo Mundo das Escrituras Sagradas) e sabe explicar com força e clareza.
+
+Analise o capítulo ${bookName} ${chapterNumber} e produza DUAS coisas.
+
+1) overview: divida o capítulo em 3 a 8 blocos de versículos por assunto.
+- Cobrem o capítulo inteiro, em ordem, sem sobrepor faixas
+- Cada bloco: verseStart, verseEnd e um resumo de 1 ou 2 frases
+- Bloco de um único versículo: verseEnd = verseStart
+
+2) themes: de 2 a 5 temas espirituais fortes que atravessam o capítulo (ex.: Esperança, Fé, Justiça, Vida eterna, Arrependimento, Amor de Deus).
+- name: o tema em 1 palavra (ou 2 no máximo)
+- emoji: um emoji que represente o tema
+- insight: 2 a 4 frases DIRETAS e com impacto, mostrando o que o capítulo ensina sobre esse tema e por que importa para a vida de quem lê. Fale com convicção, sem ser morno nem genérico. Nunca invente nada fora do texto.
+- refs: as faixas de versículos (verseStart/verseEnd) que sustentam o tema
+
+Português do Brasil. Seja fiel ao texto; não invente.
+
+Texto do capítulo:
+${versesText}`
+
+  const rangeSchema = {
+    type: 'object',
+    properties: {
+      verseStart: { type: 'integer' },
+      verseEnd: { type: 'integer' }
+    },
+    required: ['verseStart', 'verseEnd']
+  }
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: {
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: 'object',
+          properties: {
+            overview: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  verseStart: { type: 'integer' },
+                  verseEnd: { type: 'integer' },
+                  summary: { type: 'string' }
+                },
+                required: ['verseStart', 'verseEnd', 'summary']
+              }
+            },
+            themes: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  name: { type: 'string' },
+                  emoji: { type: 'string' },
+                  insight: { type: 'string' },
+                  refs: { type: 'array', items: rangeSchema }
+                },
+                required: ['name', 'insight', 'refs']
+              }
+            }
+          },
+          required: ['overview', 'themes']
+        }
+      }
+    })
+  })
+
+  const data = await res.json()
+  if (!res.ok) {
+    throw new Error(data?.error?.message || `Erro ${res.status}`)
+  }
+
+  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text
+  if (!text) throw new Error('Resposta vazia do Gemini')
+
+  const parsed = JSON.parse(text)
+  return { overview: parsed.overview || [], themes: parsed.themes || [] }
+}

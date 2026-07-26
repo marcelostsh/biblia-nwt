@@ -1,9 +1,18 @@
 <script setup>
-defineProps({
+const props = defineProps({
   verses: { type: Array, required: true },
   bookName: { type: String, required: true },
-  chapterNumber: { type: Number, required: true }
+  chapterNumber: { type: Number, required: true },
+  // faixa selecionada: [inicio, fim] — um único versículo é [n, n]
+  selectedRange: { type: Array, default: null }
 })
+
+defineEmits(['select'])
+
+function isSelected(n) {
+  const r = props.selectedRange
+  return !!r && n >= r[0] && n <= r[1]
+}
 </script>
 
 <template>
@@ -15,6 +24,8 @@ defineProps({
           :key="verse.number"
           :id="`verse-${verse.number}`"
           class="verse"
+          :class="{ selected: isSelected(verse.number) }"
+          @click="$emit('select', verse.number)"
         >
           <span v-if="verse.number === 1" class="chapter-number">{{ chapterNumber }}</span>
           <span v-else class="verse-number">{{ verse.number }}</span>
@@ -36,9 +47,10 @@ defineProps({
   line-height: 1.7;
   font-size: var(--font-size-text, 1rem);
   color: #333;
-  transition: background 0.3s;
-  padding: 2px 4px;
+  transition: background 0.3s, box-shadow 0.3s;
+  padding: 2px 4px 2px 8px;
   border-radius: 4px;
+  cursor: pointer;
 }
 
 .chapter-number {
@@ -51,8 +63,17 @@ defineProps({
   padding-top: 4px;
 }
 
+/* estado persistente: discreto, marca onde você parou */
+.verse.selected {
+  background: #eef2f9;
+  box-shadow: inset 3px 0 0 var(--q-primary);
+}
+
+/* pulso ao chegar pela busca — some em 2s e devolve ao estado discreto */
 .verse.highlight {
-  background: #fff3cd;
+  background: #d8e2f2;
+  box-shadow: inset 3px 0 0 var(--q-primary);
+  transition: none; /* entra na hora; a saída é que desliza */
 }
 
 .verse-number {

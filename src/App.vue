@@ -33,6 +33,7 @@ function openReference({ book, chapter, verse }) {
 const step = ref(0) // 0=book, 1=chapter, 2=verses
 const selectedBook = ref(null)
 const selectedChapter = ref(null)
+const selectedRange = ref(null) // [inicio, fim] ou null
 const searchQuery = ref('')
 const inputOpen = ref(true)
 const currentPanel = ref(null)
@@ -160,15 +161,43 @@ function scrollToVerse(verseNum) {
   inputOpen.value = false
   searchQuery.value = ''
   document.activeElement?.blur()
+  selectRange(verseNum, verseNum)
+}
+
+// Marca a faixa, rola até o começo dela e dá o pulso em todos os versículos envolvidos.
+function selectRange(start, end) {
+  selectedRange.value = [start, end]
   nextTick(() => {
     const container = currentPanel.value || document
-    const el = container.querySelector(`#verse-${verseNum}`)
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      el.classList.add('highlight')
-      setTimeout(() => el.classList.remove('highlight'), 2000)
+    const first = container.querySelector(`#verse-${start}`)
+    if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    const pulsed = []
+    for (let n = start; n <= end; n++) {
+      const el = container.querySelector(`#verse-${n}`)
+      if (el) {
+        el.classList.add('highlight')
+        pulsed.push(el)
+      }
     }
+    setTimeout(() => pulsed.forEach(el => el.classList.remove('highlight')), 400)
   })
+}
+
+// Vindo do resumo por IA: fecha o diálogo e pula pra faixa.
+function gotoRange({ start, end }) {
+  summaryOpen.value = false
+  selectRange(start, end)
+}
+
+// trocou de capítulo/livro → limpa a seleção (sync, pra não apagar o que a busca acabou de marcar)
+watch([selectedChapter, selectedBook], () => {
+  selectedRange.value = null
+}, { flush: 'sync' })
+
+function toggleVerse(verseNum) {
+  const r = selectedRange.value
+  const onlyThis = r && r[0] === verseNum && r[1] === verseNum
+  selectedRange.value = onlyThis ? null : [verseNum, verseNum]
 }
 
 function goHome() {
@@ -477,6 +506,7 @@ onUnmounted(() => {
       :chapter-number="selectedChapter?.number || 0"
       :verses="verses"
       @open-settings="settingsOpen = true"
+      @goto="gotoRange"
     />
     <AISearchDialog
       v-model="aiSearchOpen"
@@ -553,6 +583,8 @@ onUnmounted(() => {
                 :verses="verses"
                 :book-name="selectedBook?.name"
                 :chapter-number="selectedChapter?.number"
+                :selected-range="selectedRange"
+                @select="toggleVerse"
               />
             </div>
 

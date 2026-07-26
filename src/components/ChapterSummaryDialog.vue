@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import { summarizeChapter } from '../services/gemini.js'
+import { getSummary, saveSummary } from '../services/summaryCache.js'
 
 const props = defineProps({
   modelValue: Boolean,
@@ -9,7 +10,7 @@ const props = defineProps({
   verses: { type: Array, default: () => [] }
 })
 
-const emit = defineEmits(['update:modelValue', 'open-settings'])
+const emit = defineEmits(['update:modelValue', 'open-settings', 'goto'])
 
 const loading = ref(false)
 const error = ref('')
@@ -24,19 +25,31 @@ function rangeLabel(b) {
   return b.verseStart === b.verseEnd ? `${b.verseStart}` : `${b.verseStart}-${b.verseEnd}`
 }
 
-async function run() {
+async function run({ force = false } = {}) {
   error.value = ''
   overview.value = []
   themes.value = []
   copied.value = false
   tab.value = 'overview'
   if (!hasKey.value) return
+
+  // Capítulo já analisado antes? Usa o que está guardado.
+  if (!force) {
+    const cached = getSummary(props.bookName, props.chapterNumber)
+    if (cached) {
+      overview.value = cached.overview
+      themes.value = cached.themes
+      return
+    }
+  }
+
   loading.value = true
   try {
     const text = props.verses.map(v => `${v.number}. ${v.text}`).join('\n')
     const res = await summarizeChapter(props.bookName, props.chapterNumber, text)
     overview.value = res.overview
     themes.value = res.themes
+    saveSummary(props.bookName, props.chapterNumber, res)
   } catch (e) {
     error.value = e.message
   } finally {
@@ -65,6 +78,11 @@ function close() {
   emit('update:modelValue', false)
 }
 
+// Leva o leitor até a faixa de versículos do bloco/tema clicado.
+function goto(r) {
+  emit('goto', { start: r.verseStart, end: r.verseEnd })
+}
+
 const ready = computed(() => hasKey.value && !loading.value && !error.value)
 
 // Ao abrir, dispara a análise do capítulo atual.
@@ -86,6 +104,14 @@ watch(() => props.modelValue, (open) => {
           @click="copy"
         >
           <q-tooltip>{{ copied ? 'Copiado!' : 'Copiar' }}</q-tooltip>
+        </q-btn>
+        <q-btn
+          v-if="ready && (overview.length || themes.length)"
+          flat dense round
+          icon="refresh"
+          @click="run({ force: true })"
+        >
+          <q-tooltip>Analisar de novo</q-tooltip>
         </q-btn>
         <q-btn flat dense round icon="close" @click="close" />
       </q-toolbar>
@@ -142,7 +168,7 @@ watch(() => props.modelValue, (open) => {
       >
         <!-- Resumo por faixas -->
         <q-tab-panel name="overview" class="panel-scroll">
-          <div v-for="(b, i) in overview" :key="i" class="summary-block">
+          <div v-for="(b, i) in overview" :key="i" class="summary-block" @click="goto(b)">
             <span class="verse-range">{{ rangeLabel(b) }}</span>
             <span class="block-text">{{ b.summary }}</span>
           </div>
@@ -161,7 +187,7 @@ watch(() => props.modelValue, (open) => {
           </div>
           <p class="theme-insight">{{ t.insight }}</p>
           <div class="theme-refs">
-            <span v-for="(r, ri) in t.refs" :key="ri" class="verse-range small">{{ rangeLabel(r) }}</span>
+            <span v-for="(r, ri) in t.refs" :key="ri" class="verse-range small" @click="goto(r)">{{ rangeLabel(r) }}</span>
           </div>
         </q-tab-panel>
       </q-tab-panels>
@@ -193,6 +219,10 @@ watch(() => props.modelValue, (open) => {
   align-items: flex-start;
   padding: 12px 0;
   border-bottom: 1px solid #eee;
+  cursor: pointer;
+}
+.summary-block:active {
+  background: #f1f4fa;
 }
 .summary-block:last-child {
   border-bottom: none;
@@ -212,6 +242,7 @@ watch(() => props.modelValue, (open) => {
   min-width: 0;
   font-size: 0.9rem;
   padding: 3px 10px;
+  cursor: pointer;
 }
 .block-text {
   flex: 1;

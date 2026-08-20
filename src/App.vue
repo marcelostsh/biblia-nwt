@@ -468,7 +468,11 @@ onUnmounted(() => {
             @click="goToChapter(currentChapterIndex + 1)"
           />
         </template>
-        <q-btn flat dense round icon="auto_awesome" @click="aiSearchOpen = true" />
+        <!--
+          Lupa simples. Nenhum dos conjuntos de ícones do projeto tem "lupa com
+          IA", e sobrepor uma faísca na lupa fica ilegível no tamanho da barra.
+        -->
+        <q-btn flat dense round icon="search" aria-label="Busca com IA" @click="aiSearchOpen = true" />
         <q-btn flat dense round icon="more_vert">
           <q-menu>
             <q-list style="min-width: 180px">

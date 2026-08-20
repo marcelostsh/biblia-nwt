@@ -52,9 +52,10 @@ const emit = defineEmits(['select', 'clear'])
   grid-template-columns: repeat(5, 1fr);
   gap: 8px;
 }
+/* Mesmo peso visual do nome do livro: os dois são o item principal da sua tela. */
 .chapter-btn {
   aspect-ratio: 1;
-  font-size: 1.1rem;
+  font-size: var(--fs-lg);
   font-weight: 500;
   border-radius: 8px;
 }

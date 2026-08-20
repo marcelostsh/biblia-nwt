@@ -625,6 +625,35 @@ onUnmounted(() => {
 </template>
 
 <style>
+/*
+  Escala tipográfica única do app.
+
+  Existe porque cada tela escolhia seu tamanho no olho (0,8rem aqui, 1,15rem
+  ali, 21px fixo no título): ao mexer no controle de fonte a diferença entre
+  eles crescia junto e a proporção quebrava — o nome do livro ficava menor que
+  o breadcrumb, e o que era px fixo nem acompanhava.
+
+  Todo tamanho de interface sai daqui, derivado de --font-size-ui. A leitura do
+  versículo continua em --font-size-text, controle separado de propósito.
+
+  Hierarquia: conteúdo acima de navegação. O nome do livro (--fs-lg) é maior
+  que o breadcrumb (--fs-md), porque o livro é o que a pessoa veio buscar; o
+  breadcrumb só diz onde ela está.
+*/
+:root {
+  --fs-base: var(--font-size-ui, 16px);
+  --fs-xs: calc(var(--fs-base) * 0.75);
+  --fs-sm: calc(var(--fs-base) * 0.875);
+  --fs-md: var(--fs-base);
+  --fs-lg: calc(var(--fs-base) * 1.125);
+  --fs-xl: calc(var(--fs-base) * 1.3);
+}
+
+/* O título vem 21px cravado do Quasar e ignorava o controle de fonte. */
+.q-toolbar__title {
+  font-size: var(--fs-xl);
+}
+
 * {
   -webkit-tap-highlight-color: transparent;
 }

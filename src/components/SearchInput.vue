@@ -85,10 +85,10 @@ watch(() => props.isOpen, (val) => {
     <div v-if="step === 2 && !isOpen" class="breadcrumb" @click.stop>
       <span class="crumb crumb-book" @click="emit('goto-books')">{{ bookName }}</span>
       <template v-if="multiChapter">
-        <q-icon name="chevron_right" size="24px" color="grey-5" />
+        <q-icon name="chevron_right" size="1.5em" color="grey-5" />
         <span class="crumb crumb-chapter" @click="emit('goto-chapters')">{{ chapterNumber }}</span>
       </template>
-      <q-icon name="chevron_right" size="24px" color="grey-5" />
+      <q-icon name="chevron_right" size="1.5em" color="grey-5" />
       <span class="crumb crumb-verses" @click="emit('goto-verse')">1-{{ totalVerses }}</span>
       <q-btn
         round
@@ -120,13 +120,13 @@ watch(() => props.isOpen, (val) => {
         spellcheck="false"
       >
         <template v-slot:prepend>
-          <q-icon name="search" color="grey-6" size="26px" />
+          <q-icon name="search" color="grey-6" size="1.6em" />
         </template>
         <template v-slot:append>
           <q-icon
             name="close"
             color="grey-6"
-            size="26px"
+            size="1.6em"
             class="cursor-pointer"
             @click.stop="onClear"
           />
@@ -151,19 +151,22 @@ watch(() => props.isOpen, (val) => {
   transition: transform 0.18s ease-out;
 }
 
-/* Campo de busca com alvo de toque confortável (~56px) */
+/*
+  Alvo de toque confortável: 56px é o piso, mas cresce junto com a fonte —
+  antes era altura cravada e o campo apertava o texto em fonte grande.
+*/
 .search-field :deep(.q-field__control) {
-  height: 56px;
+  height: max(56px, calc(var(--fs-md) * 3.5));
   border-radius: 28px;
 }
 .search-field :deep(.q-field__marginal) {
-  height: 56px;
+  height: max(56px, calc(var(--fs-md) * 3.5));
 }
 .search-field :deep(.q-field__native) {
-  font-size: 1.15rem;
+  font-size: var(--fs-lg);
 }
 .search-field :deep(.q-field__native::placeholder) {
-  font-size: 1.1rem;
+  font-size: var(--fs-md);
 }
 
 .breadcrumb {
@@ -171,13 +174,14 @@ watch(() => props.isOpen, (val) => {
   align-items: center;
   gap: 6px;
   padding: 6px 4px;
-  min-height: 56px;
+  min-height: max(56px, calc(var(--fs-md) * 3.5));
 }
 
+/* Navegação, não conteúdo: fica abaixo do nome do livro na hierarquia. */
 .crumb {
-  font-size: 1.15rem;
+  font-size: var(--fs-md);
   font-weight: 600;
-  padding: 10px 18px;
+  padding: 0.6em 1em;
   border-radius: 14px;
   color: var(--q-primary);
   background: #f0f0f0;

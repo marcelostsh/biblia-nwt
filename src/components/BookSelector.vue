@@ -30,8 +30,7 @@ function testamentLabel(testament) {
     <template v-else v-for="testament in ['hebrew', 'greek']" :key="testament">
       <q-item-label
         header
-        class="text-primary text-weight-bold text-uppercase"
-        style="font-size: 0.8rem; letter-spacing: 0.5px"
+        class="text-primary text-weight-bold text-uppercase testament-header"
         v-if="books.some(b => b.testament === testament)"
       >
         {{ testamentLabel(testament) }}
@@ -52,8 +51,8 @@ function testamentLabel(testament) {
             v-ripple
           >
             <q-card-section class="q-py-sm q-px-md">
-              <div class="text-body2 text-weight-medium">{{ book.name }}</div>
-              <div class="text-caption text-grey">{{ book.chapters.length }} cap.</div>
+              <div class="book-name">{{ book.name }}</div>
+              <div class="book-meta text-grey">{{ book.chapters.length }} cap.</div>
             </q-card-section>
           </q-card>
         </div>
@@ -69,6 +68,24 @@ function testamentLabel(testament) {
   align-items: center;
   justify-content: center;
   padding-top: 25vh;
+}
+
+/* Rótulo de seção: o menor tamanho da escala, só organiza a lista. */
+.testament-header {
+  font-size: var(--fs-xs);
+  letter-spacing: 0.5px;
+}
+
+/* Item principal da tela — o maior tamanho de interface. */
+.book-name {
+  font-size: var(--fs-lg);
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.book-meta {
+  font-size: var(--fs-xs);
+  line-height: 1.4;
 }
 
 .book-card {

@@ -129,6 +129,10 @@ function parseChapterFile(filename) {
     // Remove chapter marker spans (like <span id="chapter1"></span>)
     verseHtml = verseHtml.replace(/<span id="chapter\d+"><\/span>/g, '');
 
+    // Poetry lines come as separate paragraphs with no whitespace between
+    // them; without a space here the end of one line sticks to the next.
+    verseHtml = verseHtml.replace(/<\/p>|<br\s*\/?>/g, ' ');
+
     // Strip remaining HTML tags
     let text = stripTags(verseHtml);
 
